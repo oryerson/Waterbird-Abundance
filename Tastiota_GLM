@@ -66,6 +66,34 @@ x <- dailyavg %>%
 glmpois <- glm(count~season_num+jday+PointLoc2+Tide+Wind+TempF, data = x, family =poisson()) # Poisson distributed GLM
 summary(glmpois)
 
+with(glmpois, cbind(res.deviance = deviance, df = df.residual,
+               p = pchisq(deviance, df.residual, lower.tail=FALSE))) # tests to see if model fits data, if p is > 0.05 it fits
+
+glmnotemp <- glm(count~season_num+jday+PointLoc2+Tide+Wind, data = x, family =poisson()) # Poisson distributed GLM with no temp
+summary(glmnotemp)
+
+
+glmnoj <- glm(count~season_num+PointLoc2+Tide+Wind+TempF, data = x, family =poisson()) # Poisson distributed GLM with no j-day
+summary(glmnoj)
+
+#Correlation test 
+l <- cor.test(x$jday, x$TempF, method = "kendall")
+l # there is no correlation between j-day and temp
+
+
+# Poisson distributed GLM with log of response variable
+glmlog <- glm(log(count)~season_num+jday+PointLoc2+Tide+Wind+TempF, data = x, family =poisson()) 
+summary(glmlog)
+plot(glmlog, which = 1)
+
+with(glmlog, cbind(res.deviance = deviance, df = df.residual,
+                    p = pchisq(deviance, df.residual, lower.tail=FALSE))) 
+
+AIC <- AICc(glmpois, glmnotemp, glmnoj, glmlog)
+AIC
+
+
+
 
 
 glm <- glm(count~season+monthname+PointLoc+Tide+Wind+Observer1, data = x) # normal GLM

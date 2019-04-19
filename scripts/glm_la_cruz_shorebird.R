@@ -1,3 +1,13 @@
+# GLM analysis to identify trends in abundance
+#
+# This is an example script to identify terends in abundance for shorebirds in
+# Estero La Cruz, Sonora, MX.  We go through several models and pick a GLM with
+# a negative binomial distribution in the end.
+#
+# Author: Abram Fleishman
+# Date created: 19 Apr 2019
+# Date last modified: 19 Apr 2019
+#
 rm(list=ls())
 
 library(MASS)

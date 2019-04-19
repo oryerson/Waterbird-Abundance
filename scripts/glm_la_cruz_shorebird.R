@@ -35,7 +35,7 @@ if(Sys.info()[6]!="abramfleishman"){
 
   sb <- read.csv(files[18], stringsAsFactors = FALSE)  ##"LaCruz_ShoreBirds.csv"
 }else{
-  sb<-read_csv("Data/LaCruz_ShoreBirds.csv")
+  sb<-read_csv("/git_repos/ESC_Trends/Data/LaCruz_ShoreBirds.csv")
 }
 
 # starting with shorebirds in La Cruz

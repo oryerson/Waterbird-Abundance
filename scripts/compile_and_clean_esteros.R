@@ -275,5 +275,29 @@ esteros <- bind_rows(cruz_clean %>% select(-timestart),
                      tast_clean%>% select(-timestart)) %>%
   mutate(guild=tolower(guild),
          point = tolower(point))
+
+
+# Impute zeros ------------------------------------------------------------
+bigs<-esteros %>% select(-guild,-species,-count) %>% distinct()
+counts<-esteros %>% select(date,point,species,count)
+guild_species<-esteros %>% select(guild,species) %>% distinct()
+species<-unique(esteros$species)
+poin<-unique(esteros$point)
+point_species<-expand.grid(point=poin,species=species,stringsAsFactors = F) %>%
+  left_join(guild_species)
+esteros<-bigs %>% left_join(point_species) %>% left_join(counts) %>%
+  mutate(count=ifelse(is.na(count),0,count))
+head(esteros) %>% asdf
+
+
+# checks ------------------------------------------------------------------
+
+sapply(esteros, function(x)sum(is.na(x)))
+table(esteros$estuary,is.na(esteros$cloud))
+table(esteros$estuary,is.na(esteros$tempf))
+# save --------------------------------------------------------------------
+
+
+
 saveRDS(esteros,paste0(out_dir,"compiled_esteros_for_glm_20Apr19.rds"))
 

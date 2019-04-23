@@ -82,7 +82,10 @@ cruz_clean<-cruz %>%
                          "crabcoop"="crabcamp",
                          "oystercamp"="oysterfarm"),
          Estuary="La Cruz",
-         Cloud=as.numeric(gsub("%","",Cloud))) %>%
+         Cloud=as.numeric(gsub("%","",Cloud)),
+         Cloud=ifelse(is.na(Cloud),round(mean(Cloud,na.rm=T)),Cloud),
+         TempF=ifelse(TempF==0,round(mean(TempF,na.rm=T)),TempF),
+         TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
   filter(PointLoc!="restaurant") %>%
   select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud,TempF,guild,Species,Count)
 
@@ -152,7 +155,9 @@ tast_clean<-tast %>%
 
          Estuary=recode(Estuary,
                         "Tastota"="Tastiota"),
-         Cloudcover=as.numeric(gsub("%","",Cloudcover))) %>%
+         Cloudcover=as.numeric(gsub("%","",Cloudcover)),
+         Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
+         TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
   filter(PointLoc!="restaurant") %>%
   select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
 
@@ -240,7 +245,8 @@ card_clean<-card %>%
          PointLoc=ifelse(is.na(PointLoc),"travelling",PointLoc),
          Estuary=gsub("Estero ","",Estuary),
          Cloudcover=as.numeric(gsub("%","",Cloudcover)),
-         Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover)) %>%
+         Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
+         TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
   filter(Estuary!="Tastiota") %>%
   select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
 

@@ -43,22 +43,25 @@ asdf<-as.data.frame
 
 
 # GLM? --------------------------------------------------------------------
-esteros<-readRDS(paste0(out_dir,"compiled_esteros_for_glm_20Apr19.rds"))
-
+esteros<-readRDS(paste0(out_dir,"compiled_esteros_for_glm_20Apr19.rds")) %>% filter(estuary=="La Cruz")
+esteros$guild %>% table
 # summarize by survey (group all the species)
 sum_by_season_site <- esteros %>%
   # drop jul, aug, sep for few obs # months 5 and 6 have few birds so might not make sense to include
   filter(month(date)%in%c(1:6,10:12)) %>%
   # group by species season and date, this way we can get a total number of each
   # species seen grouping all the sites.
-  group_by(  estuary,guild,year_season, month_of_season,day_of_season,day_of_season2,tide_dir,tide_height,wind,cloud,point,hour) %>%
+  group_by(  estuary,guild,year_season, month_of_season,day_of_season,day_of_season2,tide_dir,tide_height,wind,cloud,tempf,point,hour) %>%
   summarise(total_count=sum(count,na.rm=T)) %>%
-  ungroup  %>% as.data.frame()
+  ungroup %>% filter(guild=="piscivore") %>% as.data.frame()
 
 # quick checks for missing values and what unique values we have
 table(sum_by_season_site$tide_height,useNA = "ifany")
 table(sum_by_season_site$tide_dir,useNA = "ifany")
 table(sum_by_season_site$hour,useNA = "ifany")
+table(sum_by_season_site$cloud,useNA = "ifany")
+table(sum_by_season_site$wind,useNA = "ifany")
+# table(sum_by_season_site$tempf,useNA = "ifany")
 
 table(sum_by_season_site$point)
 table(sum_by_season_site$point,sum_by_season_site$year_season)
@@ -161,10 +164,12 @@ ggplot(resid_qpois,aes(x=predicted,y=pearsons_residuals))+
   geom_point()
 
 # GLM (Negitive Binomial) -----
-#  remove wind and hour and month
+#  remove wind and hour and month?
 # there was an arc in the residuals for day_of_season so I added a quadratic (day_of_season2) to account for the fact that in the beginning and end of the season there are low numbers with high numbers in the middle of the season
 
-mod_nb<-glm.nb(total_count~estuary+guild+year_season+day_of_season+day_of_season2+point+tide_height+tide_dir+cloud+wind,
+mod_nb<-glm.nb(total_count~year_season+day_of_season+day_of_season2+point+
+                 wind+cloud+tempf+
+                 tide_height+tide_dir,
                data=sum_by_season_site,link = "log")
 
 ## full model
@@ -232,7 +237,7 @@ ggplot(sum_by_season_site,aes(x=factor(month_of_season),y=deviance_residuals))+g
 
 # model selection
 mod_nb_dredge<-dredge(mod_nb,extra = "R^2")
-mod_nb_dredge %>% head(10)
+mod_nb_dredge %>% head(20)
 # says we could drop month and wind for sure and maybe hour.
 # Instead of dropping, we can model average and it will essentially do the same thing as removing them
 # but model average would be the best model set, so removal could occur
@@ -243,4 +248,4 @@ mod_nb_dredge %>% head(10)
 model.avg(mod_nb_dredge) %>% summary
 
 # year results?  30% decline per year?!
-1-exp(-0.37)
+1-exp(-0.39)

@@ -53,7 +53,7 @@ sum_by_season_site <- esteros %>%
   # species seen grouping all the sites.
   group_by(  estuary,guild,year_season, month_of_season,day_of_season,day_of_season2,tide_dir,tide_height,wind,cloud,tempf,point,hour) %>%
   summarise(total_count=sum(count,na.rm=T)) %>%
-  ungroup %>% filter(guild=="piscivore") %>% as.data.frame()
+  ungroup %>% filter(guild=="shorebird") %>% as.data.frame()
 
 # quick checks for missing values and what unique values we have
 table(sum_by_season_site$tide_height,useNA = "ifany")
@@ -167,7 +167,7 @@ ggplot(resid_qpois,aes(x=predicted,y=pearsons_residuals))+
 #  remove wind and hour and month?
 # there was an arc in the residuals for day_of_season so I added a quadratic (day_of_season2) to account for the fact that in the beginning and end of the season there are low numbers with high numbers in the middle of the season
 
-mod_nb<-glm.nb(total_count~year_season+day_of_season+day_of_season2+point+
+mod_nb<-glm.nb(total_count~year_season+day_of_season+point+
                  wind+cloud+tempf+
                  tide_height+tide_dir,
                data=sum_by_season_site,link = "log")

@@ -1,12 +1,11 @@
-# GLM analysis to identify trends in abundance
+
+# This is a script that cleans and compiles Estero la Cruz, Cardonal, and Tastitota
+# with the newly created guilds, and the removes extra sites that are not used every year
 #
-# This is an example script to identify terends in abundance for shorebirds in
-# Estero La Cruz, Sonora, MX.  We go through several models and pick a GLM with
-# a negative binomial distribution in the end.
 #
-# Author: Abram Fleishman
-# Date created: 19 Apr 2019
-# Date last modified: 19 Apr 2019
+# Author: Owen Ryerson
+# Date created: 27 Apr 2019
+# Date last modified: 27 Apr 2019
 #
 rm(list=ls())
 

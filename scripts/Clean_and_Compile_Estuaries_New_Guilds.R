@@ -40,6 +40,12 @@ if(Sys.info()[6]!="abramfleishman"){
 
 asdf<-as.data.frame
 
+##Clean up csv
+
+cruz <- select(cruz, -X1, -X1_1, -guild2)
+card <- select(card, -X1, -X1_1, -guild2)
+tast <- select(tast, -X1, -X1_1, -guild2)
+
 # Clean cruz --------------------------------------------------------------
 head(cruz) %>% asdf
 table(is.na(cruz$DateTime))

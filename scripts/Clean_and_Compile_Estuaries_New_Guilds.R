@@ -1,11 +1,12 @@
-
-# This is a script that cleans and compiles Estero la Cruz, Cardonal, and Tastitota
-# with the newly created guilds, and the removes extra sites that are not used every year
+# GLM analysis to identify trends in abundance
 #
+# This is an example script to identify terends in abundance for shorebirds in
+# Estero La Cruz, Sonora, MX.  We go through several models and pick a GLM with
+# a negative binomial distribution in the end.
 #
-# Author: Owen Ryerson
-# Date created: 27 Apr 2019
-# Date last modified: 27 Apr 2019
+# Author: Owen
+# Date created: 19 Apr 2019
+# Date last modified: 1 Apr 2019
 #
 rm(list=ls())
 
@@ -42,9 +43,10 @@ asdf<-as.data.frame
 
 ##Clean up csv
 
-cruz <- select(cruz, -X1, -X1_1, -guild2)
-card <- select(card, -X1, -X1_1, -guild2)
-tast <- select(tast, -X1, -X1_1, -guild2)
+cruz <- select(cruz, -X1, -X1_1)
+card <- select(card, -X1, -X1_1)
+tast <- select(tast, -X1, -X1_1)
+
 
 # Clean cruz --------------------------------------------------------------
 head(cruz) %>% asdf
@@ -307,14 +309,34 @@ esteros<-bigs %>% left_join(point_species) %>% left_join(counts) %>%
 head(esteros) %>% asdf
 
 
+# Add migratory column --------------------------------------------------
+
+Migratories <- c("Common Loon", "Pacific Loon", "Red-throated Loon", "Western Grebe", "Eared Grebe", "Horned Grebe", "American Avocet",
+                "Black Turnstone", "Black-bellied Plover", "Dunlin", "Greater Yellowlegs", "Least Sandpiper", "Lesser Yellowlegs",
+                "Long-billed Curlew", "Long-billed Dowitcher", "Marbled Godwit", "Red Knot", "Ruddy Turnstone", "Sanderling", "Semipalmated Plover",
+                "Short-billed Dowitcher", "Snowy Plover", "Spotted Sandpiper", "Surfbird", "Wandering Tattler", "Western Sandpiper", "Whimbrel",
+                "Willet", "Wilson's Plover", "American White Pelican", "Little Blue Heron", "White-faced Ibis", "Common Merganser",
+                "Red-breasted Merganser", "Brant", "American Coot", "Green-winged Teal", "Redhead", "Ring-necked Duck", "Snow Goose",
+                "Bufflehead", "Cinnamon Teal", "Greater Scaup", "Lesser Scaup", "Common Goldeneye", "Blue-winged Teal", "Black Tern",
+                "Least Tern", "Elegant Tern", "Forster's Tern", "Common Tern", "Caspian Tern", "Royal Tern", "Bonaparte's Gull",
+                "California Gull", "Franklin's Gull", "Glaucous-winged Gull", "Herring Gull", "Ring-billed Gull", "Sabine's Gull",
+                "Sandhill Crane", "Northern Pintail", "Northern Shoveler", "Wilson's Phalarope", "Red Phalarope", "Red-necked Phalarope")
+
+
+
+
+
+
+esteros$Migratory <- ifelse(esteros$species %in% Migratories, "yes", "no")
+
+
 # checks ------------------------------------------------------------------
 
 sapply(esteros, function(x)sum(is.na(x)))
 table(esteros$estuary,is.na(esteros$cloud))
 table(esteros$estuary,is.na(esteros$tempf))
+
 # save --------------------------------------------------------------------
-
-
 
 saveRDS(esteros,paste0(out_dir,"compiled_esteros_for_glm_27Apr19_newguilds.rds"))
 
@@ -330,4 +352,6 @@ API
 Training
 Blog
 About
+
+
 

@@ -1,0 +1,296 @@
+# This Script Compiles and Cleans the raw data from Estero Cardonal
+# it does not remove any data
+
+# Creator: Owen Ryerson
+# Created on May 3, 2019
+# Last edited May 5,2019
+
+
+rm(list=ls())
+
+library(Kendall)
+library(dplyr)
+library(ggplot2)
+library(foreign)
+
+setwd("/Users/owenryerson/Desktop/Birds!/R data Processing/CSV/Cardonal")
+
+getwd()
+
+files<-dir()
+files
+
+c0910 <- read.csv(files[1], stringsAsFactors = FALSE) ## double check these are the correct paths
+c1011 <- read.csv(files[2], stringsAsFactors = FALSE)
+c1213 <- read.csv(files[3], stringsAsFactors = FALSE)
+c1314 <- read.csv(files[4], stringsAsFactors = FALSE)
+c1415 <- read.csv(files[5], stringsAsFactors = FALSE)
+c1516 <- read.csv(files[6], stringsAsFactors = FALSE)
+c1617 <- read.csv(files[7], stringsAsFactors = FALSE)
+c1718 <- read.csv(files[8], stringsAsFactors = FALSE)
+
+
+c0910$season <- rep( "09-10" ,nrow(c0910))
+c1011$season <- rep( "10-11" ,nrow(c1011))
+c1213$season <- rep( "12-13" ,nrow(c1213))
+c1314$season <- rep( "13-14" ,nrow(c1314))
+c1415$season <- rep( "14-15" ,nrow(c1415))
+c1516$season <- rep( "15-16" ,nrow(c1516))
+c1617$season <- rep( "16-17" ,nrow(c1617))
+c1718$season <- rep( "17-18" ,nrow(c1718))
+
+c1011 <- select(c1011, -X, -X.1, -X.2, -X.3)
+c1314 <- select(c1314, -X, -X.1, -X.2, -X.3)
+c1516 <- select(c1516, -X, -X.1, -X.2, -X.3, -X.4, -X.5)
+c1718 <- select(c1718, -X, -X.1, -X.2, -X.3, -X.4, -X.5)
+
+c1718 <-  rename(c1718, Cloudcover = Cloud)
+c0910 <-  rename(c0910, Cloudcover = CloudCover)
+c1011 <-  rename(c1011, Cloudcover = CloudCover)
+c1314 <- rename(c1314, Date = Cardonal)
+
+
+c1718$DateTime <- as.POSIXct(c1718$Date , format = "%m/%d/%y" ) 
+c1617$DateTime <- as.POSIXct(c1617$Date , format = "%m/%d/%y" ) 
+c1516$DateTime <- as.POSIXct(c1516$Date , format = "%m/%d/%y" )
+c1415$DateTime <- as.POSIXct(c1415$Date , format = "%d-%b-%y" )
+c1314$DateTime <- as.POSIXct(c1314$Date , format = "%m/%d/%y" )
+c1213$DateTime <- as.POSIXct(c1213$Date , format = "%d/%m/%y" )
+c1011$DateTime <- as.POSIXct(c1011$Date , format = "%m/%d/%y" )
+c0910$DateTime <- as.POSIXct(c0910$Date , format = "%m/%d/%y" )
+
+# combine data
+ac <- rbind(c0910, c1011, c1213, c1314, c1415, c1516, c1617, c1718)
+
+
+## fix dates -----------------------------------
+
+ac <- ac %>% mutate(Date = recode(Date, "18-Nov-14"= "11/18/14", 
+                                  "14-Oct-14"="10/14/14", "9-Dec-14"="12/9/14",
+                                  "1-May-15"="5/1/15", "29-Jan-15"="1/29/15",
+                                  "19-Feb-15"="2/19/15", "24-Mar-15"="3/24/15",
+                                  "26-May-15"="5/26/15", "05/24/18"="5/24/18",
+                                  "21/11/12"="11/21/12", "22/2/13"="2/22/13"))
+unique(ac$Date)
+
+ac$DateTime <- as.POSIXct(ac$Date , format = "%m/%d/%y" )
+
+## Read in DBF file of four letter codes---------------------------------------------------
+codes <- read.dbf("/Users/owenryerson/Desktop/Birds!/Misc Birds/4 letter codes/LIST18.DBF")
+codes<- select(codes, SPEC,COMMONNAME)%>%
+  rename("code4"="SPEC")
+
+allyearscodes<-rename(ac, "code4"= "Species")
+
+newallyears<- left_join(allyearscodes,codes, by = "code4") # join common names to 4 letter codes
+
+newallyears$COMMONNAME<- as.character(newallyears$COMMONNAME) #this keeps the the next step from acting all kinds of weird
+
+newallyears <- newallyears %>% mutate(COMMONNAME=ifelse(is.na(COMMONNAME), code4, COMMONNAME))%>% # create a clumn with common names only
+  select(-code4)%>%
+  rename("Species"="COMMONNAME")
+
+
+## Mark Common Speceies---------------------------------------------------------------------------------------
+
+species <- unique(newallyears$Species)
+
+Landbirds <- c('Acorn Woodpecker', 'American Kestrel', "Anna's Hummingbird", 'Barn Swallow', 'Black-tailed Gnatcatcher',
+               'Black-throated Sparrow', 'Blue-gray Gnatcatcher (Western)', "Brewer's Sparrow", 'Burrowing Owl',
+                'Ash-throated Flycatcher', 'Black Vulture', "Bulluck's Oriole", 'Cactus Wren', 'Chipping Sparrow',
+               'Cliff Swallow', 'Common Yellowthroat', 'Corvid Sp.', 'Curve-billed Thrasher', 'Ferruginous Hawk',
+               "Gambel's Quail", 'House Finch', 'House Wren', 'Marsh Wren', "MacGillivray's Warbler", "Mountain Plover",
+               "Mourning Dove", "Northern Rough-winged Swallow", "Orange-crowned Warbler", "arasitic Jaeger", 
+               "Purple Martin", "Red-tailed Hawk", "Say's Phoebe", "Swainson's Hawk", "Western Meadowlark",
+               "Western Spindalis", "White-crowned Sparrow", "White-tailed Kite", "Wood Stork", "Yellow-rumped Warbler",
+               'Common Raven', "Cooper's Hawk", "Cooper's hawk", 'Crested Caracara', 'Dark Ardeids', 'Gila Woodpecker',
+               'Great-tailed Grackle', "Harris's Hawk", "House Sparrow", "Ladder-backed Woodpecker", 'Lark Sparrow', 
+               'Loggerhead Shrike', 'Mangrove Swallow', 'Mangrove Warbler', 'Merlin', 'Northen FLicker', 'Northern Harrier',
+               'Northern Mockingbird','Peregrine Falcon', 'Red-Tailed Hawk', 'Savannah Sparrow', 'Turkey Vulture', 'Verdin', 
+               'Vermillion Flycatcher', 'Vesper Sparrow', 'Violet-green Sparrow', 'White Ardeids', 'White-winged Dove',
+               "Great Horned Owl","Lesser Goldfinch", "Northern Flicker", "Parasitic Jaeger", "Ruby-crowned Kinglet",
+               "Rufous Hummingbird", "Violet-green Swallow")
+
+newallyears$landbird <- ifelse(newallyears$Species %in% Landbirds, T, F)
+
+# rename incorrect species names ------------------------------------------------------------------------------------
+
+
+cleanallyears <- newallyears %>% mutate(Species = recode(Species, "Black-Bellied Plover" = "Black-bellied Plover",
+                                                         "Dunlin "="Dunlin", "Gull sp. "="Gull sp.",
+                                                         "Gull Sp."="Gull sp.", "HEGU"="Herring Gull",
+                                                         "Large Shorebird sp. "="Large Shorebird sp.",
+                                                         "Magnificant Frigatebird"="Magnificent Frigatebird",
+                                                         "Medium Shorebird"="Medium Shorebird sp.",
+                                                         "Osprey "="Ospery", "Osprey  "="Osprey",
+                                                         "Peep sp. "="Peep sp.", "Peeps"="Peep sp.",
+                                                         "Plover sp"="Plover sp.",
+                                                         "Red-breated merganser"="Red-breasted Merganser",
+                                                         "Red-Breasted Merganser"="Red-breasted Merganser",
+                                                         "Small Shorebird sp. "="Small Shorebird sp.",
+                                                         "Sterna Sp."="Sterna sp.", "Tern sp."="Tern sp.",
+                                                         "Yellow-crowned night-heron"="Yellow-crowned Night-Heron",
+                                                         "BFBO "="Blue-footed Booby", "BRAN " = "Brant", 
+                                                         "WILL "="Willet", "WLPL"="Wilson's Plover", 
+                                                         "MAGO "="Marbled Godwit", "Ospery"="Osprey",
+                                                         "REDH "="Redhead", "ROYT/ELTE"="Ro/El Tern",
+                                                         "Tern sp. "="Tern sp.",
+                                                         "Red-breated merganser "="Red-breasted Merganser",
+                                                         "Double-crested cormorant"="Double-crested Cormorant",
+                                                         "Double-Crested Cormorant"="Double-crested Cormorant"))
+
+cleanallyears <- newallyears %>% mutate(Species = recode(Species,
+                                                         "Black-crowned Night-Heron (American)"="Black-crowned Night-Heron",
+                                                         "Mallard (Mexican)"="Mallard", 
+                                                         "OSPR "="Osprey",
+                                                         "Small Shorebid sp."="Small Shorebird sp.",
+                                                         "Small shorebird sp."="Small Shorebird sp.",
+                                                         "Small Shorebird Sp."="Small Shorebird sp.", 
+                                                         "Yellowlegs sp. "="Yellowlegs sp.",
+                                                         "Yellowlegs spp."="Yellowlegs sp.",
+                                                         "CAGU "="California Gull", "Peeps"="Peep sp.",
+                                                         "BUFF "="Bufflehead", "Brant "="Brant", 
+                                                         "ROYT/ELTE"="Ro/El Tern", "SEPL "="Semipalmated Plover",
+                                                         "Duck Sp."="Duck sp.","Gull sp. "="Gull sp.",
+                                                         "HEGU"="Herring Gull", "ROTE"="Royal Tern",
+                                                         "Large Shorebird sp. "="Large Shorebird sp.",
+                                                         "Ring-billed Duck"="Ring-necked Duck", 
+                                                         "NOSH"="Northern Shoveler"))
+species <- unique(cleanallyears$Species)
+View(species)
+
+# remove extra rows ----------------------------------------------------------------------------------------------------
+
+cleanallyears$Species <- na.omit(cleanallyears$Species) # remove random rows
+cleanallyears <- filter(cleanallyears, Species != "") # remove random rows
+
+cleanallyears$Date <- na.omit(cleanallyears$Date) # remove random rows
+cleanallyears <- filter(cleanallyears, Date != "") # remove random rows
+
+# Recode Site names------------------------------------------------------------------------------------------
+table(cleanallyears$PointLoc) 
+
+cleanallyears <- cleanallyears %>% mutate(PointLoc = recode(PointLoc, "Canal New   "= "Canal New", 
+                                                            "Lake "="Lake",
+                                                            "North West"="Northwest", 
+                                                            "Northwest "="Northwest", 
+                                                            "NW"="Northwest",
+                                                            "N Lake E"="North Lake East",
+                                                            "N Lake W"="North Lake West",
+                                                            "North Lake East "="North Lake East"))
+
+# Create Guilds ----------------------------------------------------------------------------------------------------
+
+# Shorebirds
+
+
+sb <- c("American Avocet", "American Oystercatcher", "Black Turnstone", "Black-bellied Plover", 
+        "Black-necked Stilt", "Dowitcher sp.", "Dunlin", "Greater Yellowlegs", "Killdeer", "Large Shorebird sp.",
+        "Least Sandpiper", "Lesser Yellowlegs", "Long-billed Curlew", "Long-billed Dowitcher", "Marbled Godwit",
+        "Marbled Godwit/Long Billed Curlew", "Medium Shorebird sp.", "Peep sp.", "Plover sp.", "Rail sp.", 
+        "Red Knot", "Roseate Spoonbill", "Ruddy Turnstone", "Sanderling", "Sandpiper sp.", 
+        "Semipalmated Plover", "Short-billed Dowitcher", "Small Shorebird sp.", "Snowy Plover", "Spotted Sandpiper", 
+        "Surfbird", "Turnstone sp.", "Wandering Tattler", "Western Sandpiper", "Whimbrel", "Willet", 
+        "Wilson's Plover", "Yellowlegs sp.", "Marbled Godwit/Long-billed Curlew", "Baird's Sandpiper",
+        "Semipalmated Sandpiper")
+
+
+# Divers
+
+d <- c("Common Loon", "Loon sp.", "Pacific Loon", "Clark's Grebe",
+       "Pied-billed Grebe", "Red-throated Loon", "Western Grebe",
+       "Eared Grebe", "Grebe sp.", "Horned Grebe", "Surf Scoter")
+
+
+# Pelicans and Allies
+
+p <- c("American White Pelican", "Blue-footed Booby", "Brown Booby",
+       "Brown Pelican", "Double-crested Cormorant", "Neotropic Cormorant",
+       "Brandt's Cormorant")
+
+
+# long-legged waders
+
+llw <- c("Black-crowned Night-Heron", "Egret sp.", "Great Blue Heron", "Great Egret", "Green Heron",
+         "Heron sp.", "Little Blue Heron", "Reddish Egret", "Snowy Egret", "Tricolored Heron",
+         "Snowy Egret", "Cattle Egret", "Yellow-crowned Night-Heron", "White Ibis", "White-faced Ibis",
+         "Night-Heron sp.")
+
+
+# Waterfoul
+
+wf <- c("Common Merganser", "Merganser sp.", "Red-breasted Merganser", "Brant", "American Coot",
+        "Greater White-fronted Goose", "Green-winged Teal", "Redhead", "Ring-necked Duck",
+        "Ring-billed Duck", "Snow Goose", "Bufflehead", "Cinnamon Teal", "Ruddy Duck",
+        "Scaup sp.", "Greater Scaup", "Lesser Scaup", "Common Goldeneye", "Blue-winged Teal",
+        "Merganser Species", "Waterfowl Sp.")
+
+
+# Gulls, Terns, and Skimmers
+
+gts <- c("Black Skimmer", "Black Tern", "Large Tern sp.", "Least Tern",
+         "Elegant Tern", "Forster's Tern", "Common Tern", "Caspian Tern",
+         "Sterna sp.", "Tern sp.", "Royal Tern", "Royal Tern/Elegant Tern",
+         "Small Tern sp.", "Bonaparte's Gull", "California Gull", 
+         "California/Herring Gull", "Franklin's Gull", "Glaucous-winged Gull",
+         "Gull sp.", "Gull-billed Tern", "Gull/Tern sp.", "Heermann's Gull",
+         "Herring Gull", "Laughing Gull", "Ring-billed Gull", "Sabine's Gull",
+         "Yellow-footed Gull", "Ro/El Tern", "Laughing Gull/Bonaparte's Gull")
+
+
+#Marchbirds
+
+mb <- c("Clapper Rail", "Least Bittern", "Sandhill Crane", "Ridgway's Rail")
+
+
+#Dabbles
+
+db <- c("Northern Pintail", "Northern Shoveler", "Wilson's Phalarope", "Mallard",
+        "Red Phalarope", "Red-necked Phalarope", "Phalarope", "American Wigeon", "Phalarope sp.")
+
+# New guilds -----------------------------------------------------
+
+cardguilds <- cleanallyears
+cardguilds$guild <- ifelse(cleanallyears$Species %in% d, 'Divers', ifelse(cleanallyears$Species %in% db, 'Dabblers', 
+                                                                   ifelse(cleanallyears$Species %in% gts, 'Gulls, Terns, and Skimmers',
+                                                                   ifelse(cleanallyears$Species %in% llw, 'Long-legged Waders',  ifelse(cleanallyears$Species %in% mb, 'marshbirds',  
+                                                                   ifelse(cleanallyears$Species %in% p, 'Pelicans and allies',  ifelse(cleanallyears$Species %in% sb, 'Shorebirds',
+                                                                   ifelse(cleanallyears$Species %in% wf, 'waterfoul', 'not in guild'))))))))
+
+# Check guilds
+cardguilds$Count <- as.numeric(cardguilds$Count)
+
+checkguilds <- group_by(cardguilds, Species, landbird, guild)%>%
+  summarise(sum(Count, na.rm=T)) %>%
+  filter(landbird== FALSE)
+
+
+# add migratory column -----------------------------------------------------------------------------
+
+Migratories <- c("Common Loon", "Pacific Loon", "Red-throated Loon", "Western Grebe", "Eared Grebe", "Horned Grebe", "American Avocet",
+                 "Black Turnstone", "Black-bellied Plover", "Dunlin", "Greater Yellowlegs", "Least Sandpiper", "Lesser Yellowlegs",
+                 "Long-billed Curlew", "Long-billed Dowitcher", "Marbled Godwit", "Red Knot", "Ruddy Turnstone", "Sanderling", "Semipalmated Plover",
+                 "Short-billed Dowitcher", "Snowy Plover", "Spotted Sandpiper", "Surfbird", "Wandering Tattler", "Western Sandpiper", "Whimbrel",
+                 "Willet", "Wilson's Plover", "American White Pelican", "Little Blue Heron", "White-faced Ibis", "Common Merganser",
+                 "Red-breasted Merganser", "Brant", "American Coot", "Green-winged Teal", "Redhead", "Ring-necked Duck", "Snow Goose",
+                 "Bufflehead", "Cinnamon Teal", "Greater Scaup", "Lesser Scaup", "Common Goldeneye", "Blue-winged Teal", "Black Tern",
+                 "Least Tern", "Elegant Tern", "Forster's Tern", "Common Tern", "Caspian Tern", "Royal Tern", "Bonaparte's Gull",
+                 "California Gull", "Franklin's Gull", "Glaucous-winged Gull", "Herring Gull", "Ring-billed Gull", "Sabine's Gull",
+                 "Sandhill Crane", "Northern Pintail", "Northern Shoveler", "Wilson's Phalarope", "Red Phalarope", "Red-necked Phalarope")
+
+
+
+cardguilds$Migratory <- ifelse(cardguilds$Species %in% Migratories, "TRUE", "FALSE")
+
+#check dates-------------------------------------------------------------------------------------
+
+unique(cardguilds$DateTime)
+
+dates <-select(cardguilds, Date, DateTime, season)
+
+cardguilds <- cardguilds %>% mutate(Date = recode(Date, "1/29/19"="1/29/14", "10/29/19"="10/29/13"))
+
+cardguilds$DateTime <- as.POSIXct(cardguilds$Date , format = "%m/%d/%y" )
+
+
+#write.csv(cardguilds,"Cardonal_Guilds_AllYearsAllSites.csv")   

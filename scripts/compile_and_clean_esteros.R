@@ -27,15 +27,15 @@ options(na.action="na.fail")
 ### Load and pepare data ###
 if(Sys.info()[6]!="abramfleishman"){
   # set your paths here Owen
-  cruz<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/LaCruz/LaCruz_Guilds.csv")
-  tast<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Tastiota/Tastiota_guilds.csv")
-  card<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Cardonal/Cardonal_Guilds.csv")
+  cruz<-read_csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/LaCruz/LaCruz_Guilds_AllYearsAllSites.csv")
+  tast<-read.csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/Tastiota/Tastiota_Guilds_AllYearsAllSites.csv",stringsAsFactors = F)
+  card<-read.csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/Cardonal/Cardonal_Guilds_AllYearsAllSites.csv",stringsAsFactors = F)
 }else{
   # paths for abram
-  cruz<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/LaCruz/LaCruz_Guilds.csv")
-  tast<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Tastiota/Tastiota_guilds.csv")
-  card<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Cardonal/Cardonal_Guilds.csv")
-  out_dir<-'/Users/abramfleishman/google_drive/R data Processing/'
+  cruz<-read_csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/LaCruz/LaCruz_Guilds_AllYearsAllSites.csv")
+  tast<-read.csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/Tastiota/Tastiota_Guilds_AllYearsAllSites.csv",stringsAsFactors = F)
+  card<-read.csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/Cardonal/Cardonal_Guilds_AllYearsAllSites.csv",stringsAsFactors = F)
+  out_dir<-'/Users/abramfleishman/google_drive/Birds!/R data Processing/'
 }
 
 asdf<-as.data.frame
@@ -46,26 +46,37 @@ table(is.na(cruz$DateTime))
 cruz %>% names
 unique(cruz$hour)
 cruz$TimeStart %>% sort%>% as.character() %>% unique()
-
+head(cruz) %>% asdf
 cruz_clean<-cruz %>%
   mutate(date=ymd(DateTime), # Make date
+         month=month(date),
          # add a numeric season year
-         year_season=ifelse(monthnum<8,year(date),year(date)+1),
+         year_season=ifelse(month<8,year(date),year(date)+1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
-         #a dd a quadradic term
+         #add a quadradic term
          day_of_season2 = day_of_season^2,
          # add month of season
-         month_of_season = ifelse(monthnum<8, monthnum+3,monthnum-8),
+         month_of_season = ifelse(month<8, month+3,month-8),
          # add hour
-         hour=hour(hms(TimeStart)),
+         hour=hour(hm(TimeStart)),
          # fix hour
          hour=as.numeric(ifelse(hour>500,str_extract(hour,"^[0-9]{2}"),hour)),
          hour=ifelse(is.na(hour),floor(mean(hour,na.rm=T)),hour),
          hour=ifelse(hour==2,14,hour),
+         hour=ifelse(hour==1,13,hour),
          # add missing tides and winds
          Tide=ifelse(is.na(Tide),"mid-rising",Tide),
+         # wind needs some real fixing
+         Wind=case_when(
+           season%in%c("09-10","10-11","11-12","12-13")&Wind%in%c("1","1.5","2") ~ 1,
+           season%in%c("09-10","10-11","11-12","12-13")&Wind%in%c("3","4","5","5.5","6","6.5") ~ 2,
+           season%in%c("09-10","10-11","11-12","12-13")&Wind%in%c("7",'8','9','10') ~ 3,
+           season%in%c("09-10","10-11","11-12","12-13")&Wind%in%c("12","13","15","16","17") ~ 4,
+           season%in%c("09-10","10-11","11-12","12-13")&Wind%in%c("18","19","20") ~ 5,
+           is.na(Wind) ~3,
+           TRUE ~0),
          Wind=ifelse(is.na(Wind),floor(mean(Wind,na.rm=T)),Wind),
          # fix tide
          Tide=tolower(Tide),

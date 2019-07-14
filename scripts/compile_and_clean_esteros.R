@@ -304,13 +304,18 @@ ncol(card_clean)
 ncol(cruz_clean)
 ncol(tast_clean)
 sapply(cruz_clean, function(x)sum(is.na(x)))
+sapply(card_clean, function(x)sum(is.na(x)))
 sapply(tast_clean, function(x)sum(is.na(x)))
+tast_clean$tempf %>% table
+cruz_clean$tempf %>% table
+card_clean$tempf %>% table
 
 esteros <- bind_rows(cruz_clean %>% select(-timestart),
                      card_clean%>% select(-timestart),
                      tast_clean%>% select(-timestart)) %>%
   mutate(guild=tolower(guild),
-         point = tolower(point))
+         point = tolower(point)) %>%
+  filter(!is.na(date))
 
 
 # Impute zeros ------------------------------------------------------------
@@ -335,5 +340,5 @@ table(esteros$estuary,is.na(esteros$tempf))
 
 
 
-saveRDS(esteros,paste0(out_dir,"compiled_esteros_for_glm_20Apr19.rds"))
+saveRDS(esteros,paste0(out_dir,"compiled_esteros_all_species_all_site_20190714.rds"))
 

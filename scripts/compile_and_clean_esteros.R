@@ -226,19 +226,23 @@ table(card$Wind )
 # need to paredown to the point counts and fix names
 table(card$PointLoc %>% tolower())
 
-
+# Fix date time
+card %>% filter(is.na(DateTime))
+card$DateTime<-ymd(card$DateTime)
+card$DateTime[is.na(card$DateTime)]<-dmy(card$Date[is.na(card$DateTime)])
+unique(card$DateTime)
 card_clean<-card %>%
   mutate(date=ymd(DateTime), # Make date
          # add a numeric season year
-         monthnum=month(date),
-         year_season=ifelse(monthnum<8,year(date),year(date)+1),
+         month=month(date),
+         year_season=ifelse(month<8,year(date),year(date)+1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
          #a dd a quadradic term
          day_of_season2 = day_of_season^2,
          # add month of season
-         month_of_season = ifelse(monthnum<8, monthnum+3,monthnum-8),
+         month_of_season = ifelse(month<8, month+3,month-8),
          # add hour
          hour=hour(hm(TimeStart)),
          # fix hour
@@ -261,6 +265,8 @@ card_clean<-card %>%
            Wind%in%c("2 to 3") ~ 2.5,
            is.na(Wind) ~3,
            TRUE ~0),
+         TempF=as.numeric(gsub("°|F","",TempF)),
+
          # fix tide
          Tide=tolower(Tide),
          Tide=recode(Tide,
@@ -278,7 +284,7 @@ card_clean<-card %>%
          Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
          TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
   filter(Estuary!="Tastiota") %>%
-  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
+  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=month,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
 
 names(card_clean)<-tolower(names(card_clean))
 

@@ -91,14 +91,15 @@ cruz_clean<-cruz %>%
          PointLoc=gsub("la|santa|site| ","",tolower(PointLoc)),
          PointLoc=recode(PointLoc,
                          "crabcoop"="crabcamp",
-                         "oystercamp"="oysterfarm"),
+                         "oystercamp"="oysterfarm",
+                         "monteristo"="montecristo"),
          Estuary="La Cruz",
          Cloud=as.numeric(gsub("%","",Cloud)),
          Cloud=ifelse(is.na(Cloud),round(mean(Cloud,na.rm=T)),Cloud),
          TempF=ifelse(TempF==0,round(mean(TempF,na.rm=T)),TempF),
          TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
-  filter(PointLoc!="restaurant") %>%
-  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud,TempF,guild,Species,Count)
+  # filter(PointLoc!="restaurant") %>%
+  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=month,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud,TempF,guild,Species,Count)
 
 names(cruz_clean)<-tolower(names(cruz_clean))
 
@@ -106,6 +107,8 @@ head(cruz_clean) %>% asdf
 
 table(cruz_clean$cloud)
 table(cruz_clean$hour)
+table(cruz_clean$tide_height)
+table(cruz_clean$tide_dir)
 table(cruz_clean$tempf)
 table(cruz_clean$wind)
 table(cruz_clean$point)

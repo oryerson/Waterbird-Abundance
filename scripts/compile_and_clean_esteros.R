@@ -131,20 +131,26 @@ table(tast$TempF )
 table(tast$Precip)
 table(tast$Wind )
 table(tast$PointLoc )
+unique(tast$TimeStart )
+table(tast$DateTime,useNA = "ifany")
+class(tast$DateTime)
 
+# fix dates
+tast$DateTime<-ymd(tast$DateTime)
+tast$DateTime[is.na(tast$DateTime)]<-dmy(gsub("Febuary","Feb",tast$Date[is.na(tast$DateTime)]))
 
 tast_clean<-tast %>%
   mutate(date=ymd(DateTime), # Make date
          # add a numeric season year
-         monthnum=month(date),
-         year_season=ifelse(monthnum<8,year(date),year(date)+1),
+         month=month(date),
+         year_season=ifelse(month<8,year(date),year(date)+1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
          #a dd a quadradic term
          day_of_season2 = day_of_season^2,
          # add month of season
-         month_of_season = ifelse(monthnum<8, monthnum+3,monthnum-8),
+         month_of_season = ifelse(month<8, month+3,month-8),
          # add hour
          hour=hour(hms(TimeStart)),
          # fix hour
@@ -153,9 +159,14 @@ tast_clean<-tast %>%
          hour=ifelse(hour==2,14,hour),
          hour=ifelse(hour==1,13,hour),
          hour=ifelse(hour==5,17,hour),
+         hour=ifelse(hour==0,9,hour),
          # add missing tides and winds
          Tide=ifelse(is.na(Tide),"mid-rising",Tide),
+         # wind needs some real fixing
+         Wind=ifelse(Wind%in%c("2,3") , 2.5,Wind),
+         Wind=as.numeric(Wind),
          Wind=ifelse(is.na(Wind),floor(mean(Wind,na.rm=T)),Wind),
+         TempF=as.numeric(gsub("°|F","",TempF)),
          # fix tide
          Tide=tolower(Tide),
          Tide=recode(Tide,
@@ -167,29 +178,34 @@ tast_clean<-tast %>%
          tide_dir=ifelse(is.na(tide_dir),"slack",tide_dir),
          # fix point names
 
-         Estuary=recode(Estuary,
-                        "Tastota"="Tastiota"),
+         Estuary="Tastiota",
          Cloudcover=as.numeric(gsub("%","",Cloudcover)),
          Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
          TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
   filter(PointLoc!="restaurant") %>%
-  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=monthnum,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
+  select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=month,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
 
 names(tast_clean)<-tolower(names(tast_clean))
 
 head(tast_clean) %>% asdf
-tast$TimeStart %>% sort%>% as.character() %>% unique()
+# tast$TimeStart %>% sort%>% as.character() %>% unique()
 tast_clean$hour %>% table
 tast_clean$tide_height %>% table
 tast_clean$tide_dir %>% table
+tast_clean$point %>% table
+tast_clean$estuary %>% table
+tast_clean$cloud %>% table
+tast_clean$tempf %>% table
+tast_clean$wind %>% table
 
 
 
-# Clean Tastiota ----------------------------------------------------------
+# Clean Cadonal ----------------------------------------------------------
 
 
 head(card) %>% asdf
-unique(card$DateTime)
+table(card$Date,useNA = "ifany")
+table(card$DateTime,useNA = "ifany")
 card$TimeStart %>% sort%>% as.character() %>% unique()
 card$TimeEnd %>% sort%>% as.character() %>% unique()
 

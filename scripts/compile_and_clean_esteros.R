@@ -51,7 +51,7 @@ cruz_clean<-cruz %>%
   mutate(date=ymd(DateTime), # Make date
          month=month(date),
          # add a numeric season year
-         year_season=ifelse(month<8,year(date),year(date)+1),
+         year_season=ifelse(month>8,year(date),year(date)-1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
@@ -137,13 +137,14 @@ class(tast$DateTime)
 
 # fix dates
 tast$DateTime<-ymd(tast$DateTime)
-tast$DateTime[is.na(tast$DateTime)]<-dmy(gsub("Febuary","Feb",tast$Date[is.na(tast$DateTime)]))
-
+tast[str_detect(tast$Date,"Febuary"),] %>% tail
+tast$DateTime[str_detect(tast$Date,"Febuary")]<-dmy(gsub("Febuary","Feb",tast$Date[str_detect(tast$Date,"Febuary")]))
+unique(tast$DateTime)
 tast_clean<-tast %>%
   mutate(date=ymd(DateTime), # Make date
          # add a numeric season year
          month=month(date),
-         year_season=ifelse(month<8,year(date),year(date)+1),
+         year_season=ifelse(month>8,year(date),year(date)-1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
@@ -235,7 +236,7 @@ card_clean<-card %>%
   mutate(date=ymd(DateTime), # Make date
          # add a numeric season year
          month=month(date),
-         year_season=ifelse(month<8,year(date),year(date)+1),
+         year_season=ifelse(month>8,year(date),year(date)-1),
          # add a day of season
          day_of_season = as.numeric(date-ymd(paste(year(date),"09","01",sep = "-"))),
          day_of_season = ifelse(day_of_season <0,day_of_season +365,day_of_season ),
@@ -329,13 +330,18 @@ point_species<-expand.grid(point=poin,species=species,stringsAsFactors = F) %>%
 esteros<-bigs %>% left_join(point_species) %>% left_join(counts) %>%
   mutate(count=ifelse(is.na(count),0,count))
 head(esteros) %>% asdf
-
+tast %>% filter(DateTime=="2028-02-25 ")
 
 # checks ------------------------------------------------------------------
 
 sapply(esteros, function(x)sum(is.na(x)))
 table(esteros$estuary,is.na(esteros$cloud))
 table(esteros$estuary,is.na(esteros$tempf))
+unique(esteros$estuary) %>% sort
+esteros %>% select(estuary,point,year_season) %>% distinct() %>%
+  arrange(estuary,point,year_season) %>% asdf
+tast_clean %>% select(year_season,estuary) %>% distinct() %>% arrange(year_season)
+head(esteros)
 # save --------------------------------------------------------------------
 
 

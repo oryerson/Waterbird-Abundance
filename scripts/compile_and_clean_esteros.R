@@ -6,7 +6,7 @@
 #
 # Author: Abram Fleishman
 # Date created: 19 Apr 2019
-# Date last modified: 19 Apr 2019
+# Date last modified: 19 Jul 2019
 #
 rm(list=ls())
 
@@ -178,7 +178,8 @@ tast_clean<-tast %>%
          tide_dir=str_extract(Tide,"slack|rising|falling"),
          tide_dir=ifelse(is.na(tide_dir),"slack",tide_dir),
          # fix point names
-
+         PointLoc=recode(PointLoc,
+                         "Camp"="Town"),
          Estuary="Tastiota",
          Cloudcover=as.numeric(gsub("%","",Cloudcover)),
          Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
@@ -279,12 +280,14 @@ card_clean<-card %>%
          tide_dir=ifelse(is.na(tide_dir),"slack",tide_dir),
          # fix point names
          PointLoc=gsub(" ","_",tolower(PointLoc)),
-         PointLoc=ifelse(is.na(PointLoc),"travelling",PointLoc),
+         PointLoc=ifelse(is.na(PointLoc),"traveling",PointLoc),
+         PointLoc=ifelse(PointLoc=="travelling","traveling",PointLoc),
+         PointLoc=ifelse(PointLoc=="nw_new","northwest",PointLoc),
          Estuary=gsub("Estero ","",Estuary),
          Cloudcover=as.numeric(gsub("%","",Cloudcover)),
          Cloudcover=ifelse(is.na(Cloudcover),round(mean(Cloudcover,na.rm=T)),Cloudcover),
          TempF=ifelse(is.na(TempF),round(mean(TempF,na.rm=T)),TempF)) %>%
-  filter(Estuary!="Tastiota") %>%
+  filter(Estuary!="Tastiota",PointLoc!="na") %>%
   select(Estuary,Point=PointLoc,date,TimeStart,year_season,month=month,month_of_season,day_of_season,day_of_season2,hour,tide_height,tide_dir,Wind,Cloud=Cloudcover,TempF,guild,Species,Count)
 
 names(card_clean)<-tolower(names(card_clean))
@@ -332,6 +335,20 @@ esteros<-bigs %>% left_join(point_species) %>% left_join(counts) %>%
 head(esteros) %>% asdf
 tast %>% filter(DateTime=="2028-02-25 ")
 
+
+# add area ----------------------------------------------------------------
+
+area<-readxl::read_xlsx("~/google_drive/Birds!/Estuary maps/Survey_Area_Allyears.xlsx",
+                        sheet = "ALL Survey Areas (NEW)") %>%
+  mutate(point=point %>% gsub(" |_", "", .) %>% tolower)
+
+head(area)
+esteros<-area %>%
+  full_join(esteros %>%  mutate(point=gsub(" |_","",point)))
+
+# calculate density -------------------------------------------------------
+esteros$density<-esteros$count/esteros$area
+
 # checks ------------------------------------------------------------------
 
 sapply(esteros, function(x)sum(is.na(x)))
@@ -340,11 +357,22 @@ table(esteros$estuary,is.na(esteros$tempf))
 unique(esteros$estuary) %>% sort
 esteros %>% select(estuary,point,year_season) %>% distinct() %>%
   arrange(estuary,point,year_season) %>% asdf
-tast_clean %>% select(year_season,estuary) %>% distinct() %>% arrange(year_season)
+tast_clean %>%
+  select(year_season,estuary) %>%
+  distinct() %>%
+  arrange(year_season)
+
 head(esteros)
+esteros %>% select(estuary,point) %>% distinct() %>% asdf
+area %>% select(estuary,point,year_season) %>% distinct() %>%
+  arrange(estuary,point,year_season) %>% asdf
+esteros %>% select(estuary,point,year_season) %>% distinct() %>%
+  arrange(estuary,point,year_season) %>% asdf
+esteros %>%filter(is.na(area)) %>%  select(estuary,point,year_season) %>% distinct() %>%
+  arrange(estuary,point,year_season) %>% asdf
 # save --------------------------------------------------------------------
 
 
 
-saveRDS(esteros,paste0(out_dir,"compiled_esteros_all_species_all_site_20190714.rds"))
+saveRDS(esteros,paste0(out_dir,"compiled_esteros_all_species_all_site_20190722.rds"))
 

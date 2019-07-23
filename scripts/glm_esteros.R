@@ -7,7 +7,7 @@
 #
 # Author: Abram Fleishman
 # Date created: 19 Apr 2019
-# Date last modified: 19 Apr 2019
+# Date last modified: 19 Jul 2019
 #
 rm(list=ls())
 
@@ -36,24 +36,32 @@ if(Sys.info()[6]!="abramfleishman"){
   cruz<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/LaCruz/LaCruz_Guilds.csv")
   tast<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Tastiota/Tastiota_guilds.csv")
   card<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Cardonal/Cardonal_Guilds.csv")
-  out_dir<-'/Users/abramfleishman/google_drive/R data Processing/'
+  out_dir<-'/Users/abramfleishman/google_drive/Birds!/R data Processing/'
 }
 
 asdf<-as.data.frame
 
 
 # GLM? --------------------------------------------------------------------
-esteros<-readRDS(paste0(out_dir,"compiled_esteros_for_glm_20Apr19.rds")) %>% filter(estuary=="La Cruz")
+esteros<-readRDS(paste0(out_dir,"compiled_esteros_all_species_all_site_20190722.rds")) # %>% filter(estuary=="La Cruz")
 esteros$guild %>% table
+head(esteros) %>% asdf
+esteros %>% select(day_of_season,year_season,point) %>% distinct %>% group_by(point,year_season) %>% count %>% asdf
 # summarize by survey (group all the species)
 sum_by_season_site <- esteros %>%
   # drop jul, aug, sep for few obs # months 5 and 6 have few birds so might not make sense to include
-  filter(month(date)%in%c(1:6,10:12)) %>%
+  filter(month(date)%in%c(1:6,10:12),
+         estuary=="La Cruz",
+         point%in%c("levee","oysterfarm","montecristo","puntacruz","crabcamp")) %>%
   # group by species season and date, this way we can get a total number of each
   # species seen grouping all the sites.
-  group_by(  estuary,guild,year_season, month_of_season,day_of_season,day_of_season2,tide_dir,tide_height,wind,cloud,tempf,point,hour) %>%
-  summarise(total_count=sum(count,na.rm=T)) %>%
-  ungroup %>% filter(guild=="shorebird") %>% as.data.frame()
+  group_by(  estuary,point,guild,
+             year_season, month_of_season,day_of_season,day_of_season2,hour,
+             tide_dir,tide_height,wind,cloud,tempf) %>%
+  summarise(total_count=sum(density,na.rm=T)) %>%
+  ungroup %>%
+  filter(guild=="gulls, terns, and skimmers") %>%
+  as.data.frame()
 
 # quick checks for missing values and what unique values we have
 table(sum_by_season_site$tide_height,useNA = "ifany")
@@ -69,16 +77,19 @@ par(mfrow=c(1,1))
 hist(sum_by_season_site$total_count,breaks = 100)
 
 # plot ?  # need more plots to see what we would predict interms of patterns
-ggplot(sum_by_season_site,aes(x=factor(guild),y = total_count,fill=factor(year_season)))+
+ggplot(sum_by_season_site,aes(x=factor(guild),y = total_count*10000,fill=factor(year_season)))+
   geom_boxplot()+
-  facet_wrap(~estuary+point,scales="free")
+  facet_wrap(~estuary+point,scales="free")+labs(y="Birds/Hectare")
 
 
 
 # GLM (Gaussian) -----
+# https://stats.stackexchange.com/questions/187824/how-to-model-non-negative-zero-inflated-continuous-data
+sum_by_season_site$total_count <-sum_by_season_site$total_count *10000
 
 mod_norm<-glm(total_count~year_season+wind+hour+day_of_season+point+tide_height+tide_dir,
-              data=sum_by_season_site)
+              data=sum_by_season_site,family = Gamma(link = log))
+
 
 # calculate risiduals for plotting
 resid_norm<-data.frame(
@@ -163,6 +174,34 @@ ggplot(resid_qpois,aes(x=predicted,y=pearsons_residuals))+
   ggplot(resid_qpois,aes(x=predicted,y=observed))+
   geom_point()
 
+
+# zero inflated model -----------------------------------------------------
+
+
+library(pscl)
+sum_by_season_site$total_count<-round(sum_by_season_site$total_count)
+mod_qpois<-zeroinfl(total_count~year_season+hour+day_of_season+point+wind+tide_height+tide_dir,
+               data=sum_by_season_site,dist = "negbin")
+
+resid_qpois<-data.frame(
+  pearsons_residuals=resid(mod_qpois,type="pearson"),
+  response_residuals=sum_by_season_site$total_count-predict(mod_qpois,type = "response"),
+  predicted=predict(mod_qpois,type = "response"),
+  observed=sum_by_season_site$total_count)
+
+summary(mod_qpois)
+par(mfrow=c(2,2))
+plot(mod_qpois)
+
+ggplot(resid_qpois,aes(x=predicted,y=pearsons_residuals))+
+  geom_point()+
+  ggplot(resid_qpois,aes(x=predicted,y=deviance_residuals))+
+  geom_point()+
+  ggplot(resid_qpois,aes(x=predicted,y=response_residuals))+
+  geom_point()+
+  ggplot(resid_qpois,aes(x=predicted,y=observed))+
+  geom_point()
+
 # GLM (Negitive Binomial) -----
 #  remove wind and hour and month?
 # there was an arc in the residuals for day_of_season so I added a quadratic (day_of_season2) to account for the fact that in the beginning and end of the season there are low numbers with high numbers in the middle of the season
@@ -174,7 +213,7 @@ mod_nb<-glm.nb(total_count~year_season+day_of_season+point+
 
 ## full model
 # mod_nb<-glm.nb(total_count~year_season+month_of_season+day_of_season+day_of_season2+hour+wind+point+tide_height+tide_dir,
-#              data=sum_by_season_site,link = "log")
+             # data=sum_by_season_site,link = "identity")
 
 resid_nb<-data.frame(
   pearsons_residuals=resid(mod_nb,type="pearson"),

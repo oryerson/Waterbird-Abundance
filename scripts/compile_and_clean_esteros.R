@@ -25,7 +25,7 @@ library(patchwork)
 options(na.action="na.fail")
 
 ### Load and pepare data ###
-if(Sys.info()[6]!="abramfleishman"){
+if(Sys.info()[7]!="abramfleishman"){
   # set your paths here Owen
   cruz<-read_csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/LaCruz/LaCruz_Guilds_AllYearsAllSites.csv")
   tast<-read.csv("/Users/abramfleishman/google_drive/Birds!/R data Processing/CSV/Tastiota/Tastiota_Guilds_AllYearsAllSites.csv",stringsAsFactors = F)

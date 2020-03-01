@@ -26,7 +26,7 @@ library(patchwork)
 options(na.action="na.fail")
 
 ### Load and pepare data ###
-if(Sys.info()[6]!="abramfleishman"){
+if(Sys.info()[7]!="abramfleishman"){
   # set your paths here Owen
   cruz<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/LaCruz/LaCruz_Guilds.csv")
   tast<-read_csv("/Users/abramfleishman/google_drive/R data Processing/CSV/Tastiota/Tastiota_guilds.csv")
@@ -58,9 +58,9 @@ sum_by_season_site <- esteros %>%
   group_by(  estuary,point,guild,
              year_season, month_of_season,day_of_season,day_of_season2,hour,
              tide_dir,tide_height,wind,cloud,tempf) %>%
-  summarise(total_count=sum(density,na.rm=T)) %>%
+  summarise(density=sum(density,na.rm=T),total_count=sum(count)) %>%
   ungroup %>%
-  filter(guild=="gulls, terns, and skimmers") %>%
+  filter(guild%in%c("shorebirds") ) %>%
   as.data.frame()
 
 # quick checks for missing values and what unique values we have
@@ -77,10 +77,13 @@ par(mfrow=c(1,1))
 hist(sum_by_season_site$total_count,breaks = 100)
 
 # plot ?  # need more plots to see what we would predict interms of patterns
-ggplot(sum_by_season_site,aes(x=factor(guild),y = total_count*10000,fill=factor(year_season)))+
+ggplot(sum_by_season_site,aes(x=factor(guild),y = total_count,fill=factor(year_season)))+
+  geom_boxplot()+
+  facet_wrap(~estuary+point,scales="free")+labs(y="Count")
+
+ggplot(sum_by_season_site,aes(x=factor(guild),y = density,fill=factor(year_season)))+
   geom_boxplot()+
   facet_wrap(~estuary+point,scales="free")+labs(y="Birds/Hectare")
-
 
 
 # GLM (Gaussian) -----
@@ -88,7 +91,7 @@ ggplot(sum_by_season_site,aes(x=factor(guild),y = total_count*10000,fill=factor(
 sum_by_season_site$total_count <-sum_by_season_site$total_count *10000
 
 mod_norm<-glm(total_count~year_season+wind+hour+day_of_season+point+tide_height+tide_dir,
-              data=sum_by_season_site,family = Gamma(link = log))
+              data=sum_by_season_site,family = poisson(link = log))
 
 
 # calculate risiduals for plotting
@@ -210,7 +213,13 @@ mod_nb<-glm.nb(total_count~year_season+day_of_season+point+
                  wind+cloud+tempf+
                  tide_height+tide_dir,
                data=sum_by_season_site,link = "log")
-
+library(brms)
+brm_mod<-brm(bf(total_count~year_season+day_of_season+
+               wind+cloud+tempf+
+               tide_height+tide_dir+(1|point),
+               zi~year_season+day_of_season+wind+cloud+tempf+
+                 tide_height+tide_dir,family=zero_inflated_negbinomial(link="log")),
+             data=sum_by_season_site,chains = 2,iter = 100,cores = 2)
 ## full model
 # mod_nb<-glm.nb(total_count~year_season+month_of_season+day_of_season+day_of_season2+hour+wind+point+tide_height+tide_dir,
              # data=sum_by_season_site,link = "identity")
@@ -225,6 +234,7 @@ resid_nb<-data.frame(
 summary(mod_nb)
 # should look at pearson's or deviance residuals for eval
 # deviance look ok
+#
 ggplot(resid_nb,aes(x=predicted,y=pearsons_residuals))+
   geom_point()+
   ggplot(resid_nb,aes(x=predicted,y=deviance_residuals))+
@@ -275,6 +285,7 @@ ggplot(sum_by_season_site,aes(x=factor(tide_dir),y=deviance_residuals))+geom_box
 ggplot(sum_by_season_site,aes(x=factor(month_of_season),y=deviance_residuals))+geom_boxplot()
 
 # model selection
+library("MuMIn")
 mod_nb_dredge<-dredge(mod_nb,extra = "R^2")
 mod_nb_dredge %>% head(20)
 # says we could drop month and wind for sure and maybe hour.
